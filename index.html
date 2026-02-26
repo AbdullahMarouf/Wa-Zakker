@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <title>Wa Zakker</title>
+    <link rel="shortcut icon" href="images/55555.png" type="image/x-icon" />
+    <style>
+      body {
+        /* font-family: serif; */
+      }
+      .accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease-out;
+      }
+    </style>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+
+  <body
+    class="bg-gradient-to-br from-purple-900 to-indigo-800 text-white min-h-screen p-6 sm:p-6 flex flex-col"
+  >
+    <div
+      class="fixed inset-0 bg-[url('./images/abstract-pattern.png')] bg-cover bg-center bg-repeat-yt opacity-10 -z-40"
+    ></div>
+    <div
+      id="progress-barr"
+      class="fixed top-0 left-0 w-0 h-1 bg-gradient-to-r from-gray-300 via-yellow-500 to-amber-400 z-50 rounded"
+    ></div>
+    <img
+      src="./images/sss.png"
+      class="w-64 h-auto sm:w-auto sm:h-80 md:h-80 lg:h-60 mx-auto py-0"
+      alt=""
+    />
+    <!-- Iftar Counter -->
+    <div
+      class="bg-white text-gray-800 rounded-lg shadow-lg p-4 sm:p-6 mb-6 w-full sm:w-11/12 mx-auto text-center relative"
+    >
+      <img
+        src="images/1212.png"
+        class="hidden lg:block absolute right-3 top-0 w-52 h-52 z-10"
+        alt=""
+        srcset=""
+      />
+      <img
+        src="images/1313.png"
+        class="sm:block absolute left-3 top-0 w-32 xs:w-40 sm:w-56 md:w-40 lg:w-52 h-auto z-10"
+        alt=""
+      />
+      <h2 class="text-lg sm:text-xl font-semibold mb-2">
+        الوقت المتبقي للإفطار
+      </h2>
+      <p
+        id="iftar-countdown"
+        class="text-xl sm:text-2xl font-bold text-purple-700 z-60"
+      ></p>
+      <br />
+      <hr class="w-1/2 mx-auto border-t-2 border-purple-200" />
+      <br />
+      <span
+        class="text-xs text-center justify-center items-center flex text-purple-600"
+        >انقر على الزر لاظهار ذكر جديد</span
+      >
+      <button
+        class="bg-purple-600 text-white px-6 py-3 rounded-2xl mt-4 hover:bg-purple-700 text-base sm:text-lg showRandomZikr"
+      >
+        عرض ذكر جديــد</button
+      ><br />
+      <button
+        class="bg-amber-500 text-white px-6 py-3 rounded-2xl mt-4 hover:bg-amber-600 text-base sm:text-lg showRandomHadith"
+      >
+        <i class="LoadingIndicator fas fa-spinner fa-spin !hidden"></i>
+        حـــديـــث نـبــــوي
+      </button>
+    </div>
+    <!-- مواقيت الصلاة -->
+    <section
+      class="bg-white shadow-lg rounded-lg p-6 w-full sm:w-11/12 mx-auto mb-6"
+    >
+      <h2
+        class="text-xl sm:text-2xl font-bold mb-6 text-center text-purple-900"
+      >
+        🕌 مواقيت الصلاة لفلسطين
+      </h2>
+
+      <div
+        id="prayer-times"
+        class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 text-center text-gray-800"
+      >
+        <!-- محتوى الصلوات يجي من API -->
+      </div>
+
+      <!-- الطقس والتاريخ الهجري -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8 text-center">
+        <div class="bg-gray-100 rounded-lg p-4 shadow">
+          <i
+            class="fas fa-cloud-sun text-blue-600 text-3xl sm:text-4xl mb-2"
+          ></i>
+          <h3 class="font-semibold text-lg sm:text-xl text-gray-800">
+            حالة الطقس
+          </h3>
+          <p id="weather" class="text-gray-800 mt-1 text-base sm:text-lg">
+            جاري التحميل...
+          </p>
+        </div>
+
+        <div class="bg-gray-100 rounded-lg p-4 shadow">
+          <i
+            class="fas fa-calendar-alt text-green-600 text-3xl sm:text-4xl mb-2"
+          ></i>
+          <h3 class="font-semibold text-lg sm:text-xl text-gray-800">
+            التاريخ الهجري
+          </h3>
+          <p id="hijri-date" class="text-gray-800 mt-1 text-base sm:text-lg">
+            جاري التحميل...
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- عداد التسبيح و نسبة الختم -->
+    <div
+      class="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-5 w-full sm:w-11/12 mx-auto justify-center"
+    >
+      <!-- عداد التسبيح -->
+      <div class="bg-white text-gray-800 rounded-lg shadow-lg p-6 mb-6 w-full">
+        <h2 class="text-lg sm:text-xl font-semibold mb-8">عداد التسبيح 📿</h2>
+        <div
+          id="counter"
+          class="text-5xl sm:text-3xl md:text-4xl text-center xs:text-center font-bold text-purple-700 mb-2 mr-1"
+        >
+          0
+        </div>
+        <button
+          class="bg-purple-600 text-white px-6 py-3 rounded-lg shadow hover:bg-purple-700 transition text-base sm:text-lg w-full incrementCounter"
+        >
+          سبحان الله
+        </button>
+        <br />
+        <button
+          class="mt-2 bg-gray-300 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-400 transition text-sm sm:text-base w-full resetCounter"
+        >
+          تصفير
+        </button>
+      </div>
+
+      <!-- عداد ختم القرآن -->
+      <div class="bg-white text-gray-800 rounded-lg shadow-lg p-6 mb-6 w-full">
+        <h2 class="text-lg sm:text-xl font-semibold mb-4">
+          حساب نسبة الختم للمصحف
+        </h2>
+
+        <input
+          type="number"
+          id="pages-read"
+          placeholder="أدخل عدد الصفحات"
+          class="border px-4 py-3 rounded w-full text-base sm:text-lg"
+        />
+        <button
+          class="mt-2 bg-purple-600 text-white px-6 py-3 rounded-lg hover:bg-purple-700 transition w-full text-base sm:text-lg submitProgress"
+        >
+          حفظ
+        </button>
+        <div class="w-full bg-gray-200 rounded h-6 mt-4">
+          <div
+            id="progress-bar"
+            class="h-6 rounded bg-purple-600"
+            style="width: 0%"
+          ></div>
+        </div>
+        <p
+          id="progress-text"
+          class="mt-2 text-sm sm:text-base text-gray-700"
+        ></p>
+      </div>
+    </div>
+
+    <img
+      src="images/ram-mubarak.png"
+      class="w-96 justify-center items-center text-center mx-auto mb-6"
+      alt=""
+      srcset=""
+    />
+    <!-- Accourdoin -->
+    <div
+      class="space-y-2 w-11/12 justify-center items-center mx-auto mb-6 copy-accordion"
+    >
+      <!-- Item 1 -->
+      <div class="bg-white border border-gray-200 rounded-lg">
+        <button
+          class="accordion-btn w-full p-4 text-left flex justify-between items-center rounded-lg hover:bg-gray-100"
+        >
+          <h2 class="font-extrabold text-gray-900">
+            دعاء عند بدء الصيام - السحور
+          </h2>
+          <span class="text-lg transition-transform duration-300 text-gray-800"
+            >+</span
+          >
+        </button>
+        <div class="accordion-content">
+          <div
+            class="p-4 pt-0 pb-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
+          >
+            وَبِصَوْمِ غَدٍ نَّوَيْتُ مِنْ شَهْرِ رَمَضَانَ
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="size-5 hover:text-purple-600 transition-colors duration-300 cursor-pointer"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M13.887 3.182c.396.037.79.08 1.183.128C16.194 3.45 17 4.414 17 5.517V16.75A2.25 2.25 0 0 1 14.75 19h-9.5A2.25 2.25 0 0 1 3 16.75V5.517c0-1.103.806-2.068 1.93-2.207.393-.048.787-.09 1.183-.128A3.001 3.001 0 0 1 9 1h2c1.373 0 2.531.923 2.887 2.182ZM7.5 4A1.5 1.5 0 0 1 9 2.5h2A1.5 1.5 0 0 1 12.5 4v.5h-5V4Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg">
+        <button
+          class="accordion-btn w-full p-4 text-left flex justify-between items-center rounded-lg hover:bg-gray-100"
+        >
+          <h2 class="font-extrabold text-gray-900">دعاء عند بدء الإفطار</h2>
+          <span class="text-lg transition-transform duration-300 text-gray-800"
+            >+</span
+          >
+        </button>
+        <div class="accordion-content">
+          <div
+            class="p-4 pt-0 pb-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
+          >
+            ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الأَجْرُ إِنْ
+            شَاءَ اللَّهُ
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="size-5 hover:text-purple-600 transition-colors duration-300 cursor-pointer"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M13.887 3.182c.396.037.79.08 1.183.128C16.194 3.45 17 4.414 17 5.517V16.75A2.25 2.25 0 0 1 14.75 19h-9.5A2.25 2.25 0 0 1 3 16.75V5.517c0-1.103.806-2.068 1.93-2.207.393-.048.787-.09 1.183-.128A3.001 3.001 0 0 1 9 1h2c1.373 0 2.531.923 2.887 2.182ZM7.5 4A1.5 1.5 0 0 1 9 2.5h2A1.5 1.5 0 0 1 12.5 4v.5h-5V4Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg">
+        <button
+          class="accordion-btn w-full p-4 text-left flex justify-between items-center rounded-lg hover:bg-gray-100"
+        >
+          <h2 class="font-extrabold text-gray-900">
+            دعاء العشر الأوائل من رمضان
+          </h2>
+          <span class="text-lg transition-transform duration-300 text-gray-800"
+            >+</span
+          >
+        </button>
+        <div class="accordion-content">
+          <div
+            class="p-4 pt-0 pb-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
+          >
+            يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغيثُ
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="size-5 hover:text-purple-600 transition-colors duration-300 cursor-pointer"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M13.887 3.182c.396.037.79.08 1.183.128C16.194 3.45 17 4.414 17 5.517V16.75A2.25 2.25 0 0 1 14.75 19h-9.5A2.25 2.25 0 0 1 3 16.75V5.517c0-1.103.806-2.068 1.93-2.207.393-.048.787-.09 1.183-.128A3.001 3.001 0 0 1 9 1h2c1.373 0 2.531.923 2.887 2.182ZM7.5 4A1.5 1.5 0 0 1 9 2.5h2A1.5 1.5 0 0 1 12.5 4v.5h-5V4Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg">
+        <button
+          class="accordion-btn w-full p-4 text-left flex justify-between items-center rounded-lg hover:bg-gray-100"
+        >
+          <h2 class="font-extrabold text-gray-900">
+            دعاء العشر الثانية من رمضان
+          </h2>
+          <span class="text-lg transition-transform duration-300 text-gray-800"
+            >+</span
+          >
+        </button>
+        <div class="accordion-content">
+          <div
+            class="p-4 pb-0 pt-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
+          >
+            اَسْتَغْفِرُ اللہَ رَبِّی مِنْ کُلِّ ذَنْبٍ وَّ اَتُوْبُ اِلَیْہِ
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="size-5 hover:text-purple-600 transition-colors duration-300 cursor-pointer"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M13.887 3.182c.396.037.79.08 1.183.128C16.194 3.45 17 4.414 17 5.517V16.75A2.25 2.25 0 0 1 14.75 19h-9.5A2.25 2.25 0 0 1 3 16.75V5.517c0-1.103.806-2.068 1.93-2.207.393-.048.787-.09 1.183-.128A3.001 3.001 0 0 1 9 1h2c1.373 0 2.531.923 2.887 2.182ZM7.5 4A1.5 1.5 0 0 1 9 2.5h2A1.5 1.5 0 0 1 12.5 4v.5h-5V4Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg">
+        <button
+          class="accordion-btn w-full p-4 text-left flex justify-between items-center rounded-lg hover:bg-gray-100"
+        >
+          <h2 class="font-extrabold text-gray-900">
+            دعاء العشر الأواخر من رمضان
+          </h2>
+          <span class="text-lg transition-transform duration-300 text-gray-800"
+            >+</span
+          >
+        </button>
+        <div class="accordion-content">
+          <div
+            class="p-4 pb-0 pt-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
+          >
+            اَللَّهُمَّ أَجِرْنِي مِنَ النَّارِ
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="size-5 hover:text-purple-600 transition-colors duration-300 cursor-pointer"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M13.887 3.182c.396.037.79.08 1.183.128C16.194 3.45 17 4.414 17 5.517V16.75A2.25 2.25 0 0 1 14.75 19h-9.5A2.25 2.25 0 0 1 3 16.75V5.517c0-1.103.806-2.068 1.93-2.207.393-.048.787-.09 1.183-.128A3.001 3.001 0 0 1 9 1h2c1.373 0 2.531.923 2.887 2.182ZM7.5 4A1.5 1.5 0 0 1 9 2.5h2A1.5 1.5 0 0 1 12.5 4v.5h-5V4Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white border border-gray-200 rounded-lg">
+        <button
+          class="accordion-btn w-full p-4 text-left flex justify-between items-center rounded-lg hover:bg-gray-100"
+        >
+          <h2 class="font-extrabold text-gray-900">دعاء ليلة القدر</h2>
+          <span class="text-lg transition-transform duration-300 text-gray-800"
+            >+</span
+          >
+        </button>
+        <div class="accordion-content">
+          <div
+            class="p-4 pb-0 pt-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
+          >
+            اللَّهُمَّ إِنَّكَ عَفُوٌّ كَرِيمٌ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              class="size-5 hover:text-purple-600 transition-colors duration-300 cursor-pointer"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M13.887 3.182c.396.037.79.08 1.183.128C16.194 3.45 17 4.414 17 5.517V16.75A2.25 2.25 0 0 1 14.75 19h-9.5A2.25 2.25 0 0 1 3 16.75V5.517c0-1.103.806-2.068 1.93-2.207.393-.048.787-.09 1.183-.128A3.001 3.001 0 0 1 9 1h2c1.373 0 2.531.923 2.887 2.182ZM7.5 4A1.5 1.5 0 0 1 9 2.5h2A1.5 1.5 0 0 1 12.5 4v.5h-5V4Z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- زر العودة للأعلى -->
+    <button
+      id="backToTop"
+      class="fixed bottom-6 right-6 bg-white text-purple-800 w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center shadow-lg opacity-0 invisible transition-all duration-500 hover:bg-amber-300"
+    >
+      <i class="fa-solid fa-angles-up text-lg sm:text-xl"></i>
+    </button>
+    <!-- الفوتر -->
+    <footer class="bg-transparent text-white py-6 w-full">
+      <div class="flex justify-center items-center">
+        <img src="images/image.png" alt="رمضان" class="w-64 sm:w-96" />
+      </div>
+      <div class="flex justify-center items-center mt-4 sm:text-xs">
+        <p class="text-center text-gray-300">
+          created by Abdullah Marouf &copy;
+        </p>
+      </div>
+    </footer>
+    <script src="js/script.js"></script>
+  </body>
+</html>
