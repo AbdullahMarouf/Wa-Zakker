@@ -120,7 +120,7 @@ const azkar = [
 BtnAzkar.onclick = () => {
   let randomZikr = azkar[Math.floor(Math.random() * azkar.length)];
   Swal.fire({
-    title: "وذكِّــــــــــــــــــر",
+    title: "وذكِّـــــــــــر",
     text: randomZikr,
     imageUrl: "images/lantern.png",
     imageWidth: 120,
