@@ -476,6 +476,7 @@ BtnAzkar.onclick = () => {
     padding: window.innerWidth < 640 ? "12px" : "32px",
     background: "#ffffff",
     color: "#000000",
+    confirmButtonText: "حسناً",
     customClass: {
       title: "text-purple-600 font-extrabold text-3xl mb-4 text-center",
     },
