@@ -1,5 +1,5 @@
 // =========================================
-// 🌙 عداد الإفطار الديناميكي — استبدل الكود القديم بهذا كاملاً
+// 🌙 عداد الإفطار الديناميكي
 // =========================================
 
 const el = document.querySelector("#iftar-countdown");
@@ -8,48 +8,54 @@ let halfAlerted = false;
 let iftarHour = null;
 let iftarMinute = null;
 
-// جلب وقت المغرب من API مواقيت الصلاة
-async function fetchIftarTime() {
+async function fetchIftarTime(city, country) {
   try {
     const res = await fetch(
-      "https://api.aladhan.com/v1/timingsByCity?city=Gaza&country=Palestine&method=4",
+      `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=4`,
     );
     const data = await res.json();
-    const maghrib = data.data.timings.Maghrib; // "HH:MM"
+    const maghrib = data.data.timings.Maghrib;
     [iftarHour, iftarMinute] = maghrib.split(":").map(Number);
   } catch (err) {
     console.error("تعذّر جلب وقت الإفطار:", err);
-    // fallback
     iftarHour = 17;
     iftarMinute = 40;
   }
 }
 
-// بناء كائن وقت الإفطار ليومنا
+async function fetchIftarTimeByCoords(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=4`,
+    );
+    const data = await res.json();
+    const maghrib = data.data.timings.Maghrib;
+    [iftarHour, iftarMinute] = maghrib.split(":").map(Number);
+  } catch (err) {
+    console.error("تعذّر جلب وقت الإفطار:", err);
+    iftarHour = 17;
+    iftarMinute = 40;
+  }
+}
+
 function getIftarDate() {
   const iftar = new Date();
   iftar.setHours(iftarHour, iftarMinute, 0, 0);
   return iftar;
 }
 
-// =========================================
-// العداد الرئيسي
-// =========================================
 function startCountdown() {
   setInterval(() => {
-    if (iftarHour === null) return; // لسا ما جاء الوقت من API
+    if (iftarHour === null) return;
 
     const now = new Date();
     let iftar = getIftarDate();
-
     const diff = iftar - now;
     const diffAbs = Math.abs(diff);
 
-    // ——— بعد الإفطار بأقل من 30 دقيقة ———
     if (diff <= 0 && diffAbs <= 30 * 60 * 1000) {
       const minsAgo = Math.floor(diffAbs / 60000);
       const secsAgo = Math.floor((diffAbs % 60000) / 1000);
-
       el.innerHTML = `
         <div class="text-center">
           <div class="text-2xl font-bold text-green-600">🍽️ أفطرتَ منذ</div>
@@ -60,14 +66,12 @@ function startCountdown() {
             ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الأَجْرُ إِنْ شَاءَ اللَّهُ 🤲
           </div>
         </div>`;
-
-      // تنبيه لحظة الإفطار (مرة واحدة)
       if (!alerted) {
         alerted = true;
         Swal.fire({
           title: "🌙 إفطار مبارك",
           html: `
-            <div class="text-lg font-bold text-gray-700 mb-3" style="font-family: 'Amiri'">تقبّل الله صيامكم وقيامكم</div>
+            <div class="text-lg font-bold text-gray-700 mb-3">تقبّل الله صيامكم وقيامكم</div>
             <div class="bg-purple-50 rounded-xl p-4 text-center text-gray-800 font-bold leading-8">
               ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ<br/>وَثَبَتَ الأَجْرُ إِنْ شَاءَ اللَّهُ
             </div>`,
@@ -76,18 +80,15 @@ function startCountdown() {
           background: "#fdf4ff",
         });
       }
-
       return;
     }
 
-    // ——— بعد 30 دقيقة من الإفطار: أعد للإفطار القادم ———
     if (diff <= 0 && diffAbs > 30 * 60 * 1000) {
       iftar.setDate(iftar.getDate() + 1);
       alerted = false;
       halfAlerted = false;
     }
 
-    // ——— العداد الطبيعي للإفطار القادم ———
     const timeLeft = iftar - now;
     const h = String(Math.floor(timeLeft / 3600000)).padStart(2, "0");
     const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, "0");
@@ -95,7 +96,7 @@ function startCountdown() {
 
     el.innerHTML = `
       <div class="text-center">
-        <div class="text-xl font-bold text-purble-800">
+        <div class="text-xl font-bold text-gray-800">
           ${h} ساعة : ${m} دقيقة : ${s} ثانية
         </div>
         <div class="text-purple-600 font-bold mt-2">
@@ -103,7 +104,6 @@ function startCountdown() {
         </div>
       </div>`;
 
-    // ——— تنبيه قبل الإفطار بـ 30 دقيقة ———
     if (timeLeft <= 30 * 60 * 1000 && timeLeft > 0 && !halfAlerted) {
       halfAlerted = true;
       const minsLeft = Math.ceil(timeLeft / 60000);
@@ -130,20 +130,309 @@ function startCountdown() {
 }
 
 // =========================================
-// تشغيل كل شيء
+// 🌍 اختيار الموقع — GPS + Dropdown
 // =========================================
-fetchIftarTime().then(() => {
-  startCountdown();
 
-  // تحديث وقت الإفطار كل يوم عند منتصف الليل
+const ARAB_CITIES = [
+  { country: "Palestine", city: "Gaza", label: "🇵🇸 فلسطين — غزة" },
+  { country: "Palestine", city: "Jerusalem", label: "🇵🇸 فلسطين — القدس" },
+  { country: "Palestine", city: "Ramallah", label: "🇵🇸 فلسطين — رام الله" },
+  { country: "Palestine", city: "Nablus", label: "🇵🇸 فلسطين — نابلس" },
+  { country: "Palestine", city: "Hebron", label: "🇵🇸 فلسطين — الخليل" },
+  { country: "Jordan", city: "Amman", label: "🇯🇴 الأردن — عمّان" },
+  { country: "Jordan", city: "Zarqa", label: "🇯🇴 الأردن — الزرقاء" },
+  { country: "Egypt", city: "Cairo", label: "🇪🇬 مصر — القاهرة" },
+  { country: "Egypt", city: "Alexandria", label: "🇪🇬 مصر — الإسكندرية" },
+  { country: "Saudi Arabia", city: "Riyadh", label: "🇸🇦 السعودية — الرياض" },
+  { country: "Saudi Arabia", city: "Jeddah", label: "🇸🇦 السعودية — جدة" },
+  {
+    country: "Saudi Arabia",
+    city: "Mecca",
+    label: "🇸🇦 السعودية — مكة المكرمة",
+  },
+  {
+    country: "Saudi Arabia",
+    city: "Medina",
+    label: "🇸🇦 السعودية — المدينة المنورة",
+  },
+  { country: "UAE", city: "Dubai", label: "🇦🇪 الإمارات — دبي" },
+  { country: "UAE", city: "Abu Dhabi", label: "🇦🇪 الإمارات — أبوظبي" },
+  { country: "Kuwait", city: "Kuwait City", label: "🇰🇼 الكويت" },
+  { country: "Qatar", city: "Doha", label: "🇶🇦 قطر — الدوحة" },
+  { country: "Bahrain", city: "Manama", label: "🇧🇭 البحرين — المنامة" },
+  { country: "Oman", city: "Muscat", label: "🇴🇲 عُمان — مسقط" },
+  { country: "Yemen", city: "Sanaa", label: "🇾🇪 اليمن — صنعاء" },
+  { country: "Yemen", city: "Aden", label: "🇾🇪 اليمن — عدن" },
+  { country: "Iraq", city: "Baghdad", label: "🇮🇶 العراق — بغداد" },
+  { country: "Iraq", city: "Basra", label: "🇮🇶 العراق — البصرة" },
+  { country: "Syria", city: "Damascus", label: "🇸🇾 سوريا — دمشق" },
+  { country: "Syria", city: "Aleppo", label: "🇸🇾 سوريا — حلب" },
+  { country: "Lebanon", city: "Beirut", label: "🇱🇧 لبنان — بيروت" },
+  { country: "Libya", city: "Tripoli", label: "🇱🇾 ليبيا — طرابلس" },
+  { country: "Tunisia", city: "Tunis", label: "🇹🇳 تونس" },
+  { country: "Algeria", city: "Algiers", label: "🇩🇿 الجزائر" },
+  { country: "Morocco", city: "Rabat", label: "🇲🇦 المغرب — الرباط" },
+  {
+    country: "Morocco",
+    city: "Casablanca",
+    label: "🇲🇦 المغرب — الدار البيضاء",
+  },
+  { country: "Sudan", city: "Khartoum", label: "🇸🇩 السودان — الخرطوم" },
+  { country: "Somalia", city: "Mogadishu", label: "🇸🇴 الصومال — مقديشو" },
+  {
+    country: "Mauritania",
+    city: "Nouakchott",
+    label: "🇲🇷 موريتانيا — نواكشوط",
+  },
+];
+
+const container = document.querySelector("#prayer-times");
+const locBadge = document.getElementById("loc-badge");
+const citySelect = document.getElementById("city-select");
+
+// ── ملء الـ Dropdown ──
+ARAB_CITIES.forEach((c, i) => {
+  const opt = document.createElement("option");
+  opt.value = i;
+  opt.textContent = c.label;
+  if (c.city === "Gaza") opt.selected = true;
+  citySelect.appendChild(opt);
+});
+
+// ── Skeleton Loading ──
+function showSkeleton() {
+  container.innerHTML = Array(5)
+    .fill(
+      `
+    <div class="bg-gray-100 rounded-lg p-4 shadow text-center animate-pulse">
+      <div class="w-8 h-8 bg-gray-300 rounded-full mx-auto mb-2"></div>
+      <div class="h-3 bg-gray-300 rounded w-3/4 mx-auto mb-2"></div>
+      <div class="h-3 bg-gray-200 rounded w-1/2 mx-auto"></div>
+    </div>`,
+    )
+    .join("");
+}
+
+// ── رسم بطاقات الصلوات ──
+function renderPrayerCards(t) {
+  const prayers = [
+    { name: "الفجر", time: t.Fajr, icon: "fa-moon" },
+    { name: "الظهر", time: t.Dhuhr, icon: "fa-sun" },
+    { name: "العصر", time: t.Asr, icon: "fa-cloud-sun" },
+    { name: "المغرب", time: t.Maghrib, icon: "fa-star-and-crescent" },
+    { name: "العشاء", time: t.Isha, icon: "fa-mosque" },
+  ];
+  container.innerHTML = "";
+  prayers.forEach((p) => {
+    container.insertAdjacentHTML(
+      "beforeend",
+      `
+      <div class="bg-gray-100 rounded-lg p-4 shadow text-center transition-all duration-300">
+        <i class="fas ${p.icon} text-purple-600 text-2xl mb-2"></i>
+        <h3 class="font-semibold">${p.name}</h3>
+        <p class="text-gray-700 mt-1">${p.time}</p>
+      </div>`,
+    );
+  });
+  highlightCurrentPrayer(t);
+  setInterval(() => highlightCurrentPrayer(t), 60 * 1000);
+}
+
+// ── جلب المواقيت بالاسم ──
+async function loadPrayerTimes(city, country) {
+  showSkeleton();
+  try {
+    const res = await fetch(
+      `https://api.aladhan.com/v1/timingsByCity?city=${encodeURIComponent(city)}&country=${encodeURIComponent(country)}&method=4`,
+    );
+    const data = await res.json();
+    renderPrayerCards(data.data.timings);
+    // تحديث وقت الإفطار للمدينة الجديدة
+    const mag = data.data.timings.Maghrib;
+    [iftarHour, iftarMinute] = mag.split(":").map(Number);
+    alerted = false;
+    halfAlerted = false;
+  } catch {
+    container.innerHTML = `<p class="text-red-500 col-span-5 text-center py-4">❌ تعذّر جلب المواقيت</p>`;
+  }
+}
+
+// ── جلب المواقيت بالإحداثيات ──
+async function loadPrayerTimesByCoords(lat, lng) {
+  showSkeleton();
+  try {
+    const res = await fetch(
+      `https://api.aladhan.com/v1/timings?latitude=${lat}&longitude=${lng}&method=4`,
+    );
+    const data = await res.json();
+    renderPrayerCards(data.data.timings);
+    const mag = data.data.timings.Maghrib;
+    [iftarHour, iftarMinute] = mag.split(":").map(Number);
+    alerted = false;
+    halfAlerted = false;
+  } catch {
+    container.innerHTML = `<p class="text-red-500 col-span-5 text-center py-4">❌ تعذّر جلب المواقيت</p>`;
+  }
+}
+
+// ── GPS ──
+document.getElementById("gps-btn").addEventListener("click", () => {
+  const btn = document.getElementById("gps-btn");
+  const lbl = document.getElementById("gps-label");
+
+  if (!navigator.geolocation) {
+    Swal.fire({
+      toast: true,
+      position: "top",
+      icon: "error",
+      title: "المتصفح لا يدعم GPS",
+      timer: 3000,
+      showConfirmButton: false,
+    });
+    return;
+  }
+
+  lbl.textContent = "⏳ جاري التحديد...";
+  btn.disabled = true;
+
+  navigator.geolocation.getCurrentPosition(
+    async (pos) => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      lbl.textContent = "📍 موقعي تلقائياً";
+      btn.disabled = false;
+
+      try {
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&accept-language=ar`,
+        );
+        const d = await r.json();
+        const city =
+          d.address.city || d.address.town || d.address.village || "موقعك";
+        const country = d.address.country || "";
+        locBadge.textContent = `📍 ${city}، ${country}`;
+        // إلغاء اختيار الـ dropdown
+        citySelect.value = "";
+        // حفظ
+        localStorage.removeItem("savedCityIndex");
+      } catch {
+        locBadge.textContent = "📍 موقعك الحالي";
+      }
+
+      loadPrayerTimesByCoords(lat, lng);
+    },
+    (err) => {
+      lbl.textContent = "📍 موقعي تلقائياً";
+      btn.disabled = false;
+      Swal.fire({
+        toast: true,
+        position: "top",
+        icon: "warning",
+        timer: 4000,
+        showConfirmButton: false,
+        title:
+          err.code === 1 ? "❌ تم رفض الوصول للموقع" : "⚠️ تعذّر تحديد الموقع",
+      });
+    },
+    { timeout: 10000 },
+  );
+});
+
+// ── Dropdown تغيير المدينة ──
+citySelect.addEventListener("change", () => {
+  const c = ARAB_CITIES[citySelect.value];
+  const shortLabel = c.label.replace(/\p{Emoji_Presentation}+/gu, "").trim();
+  locBadge.textContent = `📌 ${shortLabel}`;
+  localStorage.setItem("savedCityIndex", citySelect.value);
+  loadPrayerTimes(c.city, c.country);
+});
+
+// ── تحميل مبدئي ──
+const savedIndex = localStorage.getItem("savedCityIndex");
+if (savedIndex !== null && ARAB_CITIES[savedIndex]) {
+  citySelect.value = savedIndex;
+  const c = ARAB_CITIES[savedIndex];
+  const shortLabel = c.label.replace(/\p{Emoji_Presentation}+/gu, "").trim();
+  locBadge.textContent = `📌 ${shortLabel}`;
+  loadPrayerTimes(c.city, c.country);
+} else {
+  loadPrayerTimes("Gaza", "Palestine");
+}
+
+// تشغيل العداد
+fetchIftarTime("Gaza", "Palestine").then(() => {
+  startCountdown();
   const now = new Date();
   const midnight = new Date();
   midnight.setHours(24, 0, 0, 0);
   setTimeout(() => {
-    fetchIftarTime();
-    setInterval(fetchIftarTime, 24 * 60 * 60 * 1000);
+    const saved = localStorage.getItem("savedCityIndex");
+    const c = saved
+      ? ARAB_CITIES[saved]
+      : { city: "Gaza", country: "Palestine" };
+    fetchIftarTime(c.city, c.country);
+    setInterval(() => fetchIftarTime(c.city, c.country), 24 * 60 * 60 * 1000);
   }, midnight - now);
 });
+
+// =========================================
+// تحديد الصلاة الحالية تلقائياً ✨
+// =========================================
+function highlightCurrentPrayer(timings) {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  function toMinutes(timeStr) {
+    const [h, m] = timeStr.split(":").map(Number);
+    return h * 60 + m;
+  }
+
+  const prayerOrder = [
+    { key: "Fajr" },
+    { key: "Dhuhr" },
+    { key: "Asr" },
+    { key: "Maghrib" },
+    { key: "Isha" },
+  ];
+
+  let currentIndex = 0;
+  for (let i = 0; i < prayerOrder.length; i++) {
+    if (currentMinutes >= toMinutes(timings[prayerOrder[i].key])) {
+      currentIndex = i;
+    }
+  }
+
+  const cards = document.querySelectorAll("#prayer-times > div");
+  cards.forEach((card, index) => {
+    card.classList.remove(
+      "ring-2",
+      "ring-purple-500",
+      "bg-purple-50",
+      "scale-105",
+      "shadow-lg",
+      "shadow-purple-200",
+    );
+    const badge = card.querySelector(".current-badge");
+    if (badge) badge.remove();
+
+    if (index === currentIndex) {
+      card.classList.add(
+        "ring-2",
+        "ring-purple-500",
+        "bg-purple-50",
+        "scale-105",
+        "shadow-lg",
+        "shadow-purple-200",
+      );
+      card.style.transition = "all 0.4s ease";
+      const badge = document.createElement("div");
+      badge.className =
+        "current-badge mt-2 text-xs font-bold text-purple-600 bg-purple-100 rounded-full px-2 py-0.5 inline-block";
+      badge.textContent = "🕌 الصلاة الحالية";
+      card.appendChild(badge);
+    }
+  });
+}
+
 // -------------------------
 // أذكار عشوائية (Azkar)
 // -------------------------
@@ -159,80 +448,29 @@ const azkar = [
   "اللهم اجعلني فيه من الذين يكثرون الصدقة، ويطعمون الطعام، ويؤوون اليتامى، ويواسون الفقراء، ويحنّون على الأرامل والمساكين.",
   "اللهم اجعلني فيه من الذين يكثرون ذكر الموت، ويستعدون للقاءك، ويعملون للآخرة، ويزهدون في الدنيا، ويجعلون رضاك غايتهم.",
   "اللهم اجعلني فيه من الذين يكثرون الاستغفار، ويغفر لهم، ويبدّل سيئاتهم حسنات، ويجعلون لسانهم رطباً بذكرك.",
-  "اللهم اجعلني فيه من الذين يكثرون القيام، ويخشعون في صلاتهم، ويطيلون السجود، ويستشعرون قربك في دعائهم.",
-  "اللهم اجعلني فيه من الذين يكثرون البكاء من خشيتك، ويخشعون عند سماع القرآن، ويجدون لذة الإيمان في قلوبهم.",
-  "اللهم اجعلني فيه من الذين يكثرون العمل الصالح، ويجعلون نيتهم خالصة لك، ويبتعدون عن الرياء والسمعة.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكر اسمك العظيم، ويستحضرون عظمة جلالك، ويخشعون عند ذكرك.",
-  "اللهم اجعلني فيه من الذين يكثرون الصبر على البلاء، ويحتسبون الأجر عندك، ويثقون بحكمتك وعدلك.",
-  "اللهم اجعلني فيه من الذين يكثرون الشكر على نعمك، ويعترفون بفضلك، ويستعملون نعمك في طاعتك.",
-  "اللهم اجعلني فيه من الذين يكثرون التوبة، ويعودون إليك بعد الذنب، ويستغفرونك بصدق وإخلاص.",
-  "اللهم اجعلني فيه من الذين يكثرون حسن الظن بك، ويثقون برحمتك، ويأملون في عفوك ومغفرتك.",
-  "اللهم اجعلني فيه من الذين يكثرون قراءة القرآن، ويتدبرون آياته، ويعملون بما فيه من أوامر ونواهي.",
-  "اللهم اجعلني فيه من الذين يكثرون الدعاء لأهلهم وأحبابهم، ويصلون أرحامهم، ويبرّون والديهم.",
-  "اللهم اجعلني فيه من الذين يكثرون العمل الجماعي، ويحبون الخير للناس، ويعاونون على البر والتقوى.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكر نعمك، ويستحضرون فضلك، ويشكرونك في السر والعلن.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكر الجنة، ويعملون لها، ويشتاقون إليها، ويبتعدون عن النار.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكر الأنبياء والصالحين، ويقتدون بهم، ويعملون بسننهم.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكر رحمتك، ويستشعرون لطفك، ويعيشون في ظل عفوك.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكر فضائل رمضان، ويغتنمون أيامه ولياليه، ويستثمرون وقته في الطاعة.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكر ليلة القدر، ويستعدون لها، ويكثرون الدعاء فيها، ويغتنمون فضلها العظيم.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكر الصالحين، ويحبون صحبتهم، ويقتدون بأعمالهم، ويستفيدون من علمهم.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكرك في كل حال، ويجعلون حياتهم كلها طاعة لك، ويبتعدون عن معصيتك.",
-  "اللهم اجعلني فيه من الذين يكثرون ذكر يوم القيامة، ويستعدون له، ويعملون لما بعد الموت، ويجعلون رضاك غايتهم.",
   "اللهم اغفر لي ذنوبي كلها، ما علمت منها وما لم أعلم، إنك أنت الغفور الرحيم.",
   "اللهم إنك عفو تحب العفو فاعفُ عني، واكتب لي مغفرةً تمحو بها خطاياي.",
   "ربنا ظلمنا أنفسنا وإن لم تغفر لنا وترحمنا لنكونن من الخاسرين.",
   "اللهم وسّع علينا رحمتك، واغمر قلوبنا بسكينتك ورضاك.",
-  "اللهم تب علينا توبةً نصوحًا، واغسل قلوبنا من الذنوب والزلل.",
-  "اللهم لا تخرجنا من هذا اليوم إلا وقد غفرت لنا ذنوبنا كلها.",
   "لا اله الا أنت سبحانك إني كنتُ من الظالمين",
   "اللهم ارزقنا رزقًا حلالًا طيبًا مباركًا فيه، واغننا بفضلك عمّن سواك.",
   "اللهم بارك لنا في أعمارنا وأوقاتنا وأعمالنا، واكتب لنا التوفيق والسداد.",
   "اللهم افتح لنا أبواب الخير من حيث لا نحتسب، ويسّر لنا أمورنا كلها.",
-  "اللهم اجعل حياتنا زيادةً لنا في كل خير، واصرف عنا كل شر.",
-  "اللهم ارزقنا علمًا نافعًا، وقلبًا خاشعًا، وعملاً متقبلاً.",
-  "اللهم اجعل البركة تملأ بيوتنا وأعمالنا وأرزاقنا.",
   "اللهم أجرنا من النار واعتق رقابنا منها، وأدخلنا الجنة بغير حساب.",
   "اللهم أصلح لنا ديننا الذي هو عصمة أمرنا، وأصلح لنا دنيانا وآخرتنا.",
   "اللهم اجعل القرآن الكريم نور قلوبنا وشفاء صدورنا وذهاب همومنا.",
   "اللهم اختم لنا بخاتمة السعادة، واجعل آخر كلامنا لا إله إلا الله.",
-  "اللهم اجعلنا من المقبولين، ولا تجعلنا من المحرومين.",
-  "اللهم باعد بيننا وبين خطايانا كما باعدت بين المشرق والمغرب.",
-  "اللهم اشرح صدورنا ويسّر أمورنا، واصرف عنا القلق والهم.",
-  "اللهم أنزل علينا سكينتك، واملأ قلوبنا رضا وطمأنينة.",
-  "اللهم اكفنا ما أهمّنا، ووفّقنا لما تحب وترضى.",
-  "اللهم اجعل لنا من كل ضيق مخرجًا، ومن كل هم فرجًا.",
-  "اللهم اغفر لوالدينا وارحمهما كما ربّيانا صغارًا, اللهم ارفع درجاتهما في الجنة، واجزهما عنا خير الجزاء.",
-  "اللهم اغفر لموتانا وموتى المسلمين، ونوّر قبورهم برحمتك واجعلها روضةً من رياض الجنة، وآنس وحشتهم واجمعنا بهم في جناتك جنات النعيم.",
-  "اللهم اكتب لنا الخير حيث كان، ثم رضّنا به وبارك لنا فيه.",
-  "اللهم اجعلنا من أهل الذكر والشكر، ومن المقبولين عندك.",
+  "اللهم اغفر لوالدينا وارحمهما كما ربّيانا صغارًا، اللهم ارفع درجاتهما في الجنة، واجزهما عنا خير الجزاء.",
+  "اللهم اغفر لموتانا وموتى المسلمين، ونوّر قبورهم برحمتك واجعلها روضةً من رياض الجنة.",
   "اللهم تقبّل منا صالح الأعمال، وبلّغنا أعلى الدرجات برحمتك.",
 ];
-// BtnAzkar.onclick = () => {
-//   let randomZikr = azkar[Math.floor(Math.random() * azkar.length)];
-//   Swal.fire({
-//     title: "وذكِّــــــــــــــــــر",
-//     text: randomZikr,
-//     imageUrl: "images/lantern.png",
-//     imageWidth: 120,
 
-//     width: window.innerWidth < 640 ? 280 : 500, // أصغر على الجوال
-
-//     background: "#ffffff",
-//     color: "#000000",
-
-//     customClass: {
-//       title: "text-purple-600 font-extrabold text-3xl mb-4 text-center",
-//     },
-//   });
-// };
 BtnAzkar.onclick = () => {
   let randomZikr = azkar[Math.floor(Math.random() * azkar.length)];
   Swal.fire({
     title: "وذكِّـــــــــــر",
     text: randomZikr,
     imageUrl: "images/lantern.png",
-    imageWidth: 120,
     width: window.innerWidth < 640 ? "78vw" : 500,
     imageWidth: window.innerWidth < 640 ? 55 : 120,
     padding: window.innerWidth < 640 ? "12px" : "32px",
@@ -242,38 +480,20 @@ BtnAzkar.onclick = () => {
       title: "text-purple-600 font-extrabold text-3xl mb-4 text-center",
     },
     footer: `
-  <button id="copy-btn" onclick="copyZikr()" class="flex items-center gap-2 bg-purple-100 border border-purple-600 rounded-lg px-2 py-1.5 text-purple-600 text-sm cursor-pointer transition-all duration-700 hover:border-purple-900 hover:text-purple-900 hover:bg-purple-200">
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
-  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
-</svg>
-
-
-    نسخ
-  </button>
-`,
-
+      <button id="copy-btn" onclick="copyZikr()" class="flex items-center gap-2 bg-purple-100 border border-purple-600 rounded-lg px-2 py-1.5 text-purple-600 text-sm cursor-pointer transition-all duration-700 hover:border-purple-900 hover:text-purple-900 hover:bg-purple-200">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" /></svg>
+        نسخ
+      </button>`,
     didOpen: () => {
       window.copyZikr = () => {
         navigator.clipboard.writeText(randomZikr).then(() => {
           const btn = document.getElementById("copy-btn");
-          btn.innerHTML = `
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 duration-500">
-  <path stroke-linecap="round" stroke-linejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0 1 18 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3 1.5 1.5 3-3.75" />
-</svg>
-
-
-          `;
+          btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M11.35 3.836c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m8.9-4.414c.376.023.75.05 1.124.08 1.131.094 1.976 1.057 1.976 2.192V16.5A2.25 2.25 0 0 1 18 18.75h-2.25m-7.5-10.5H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V18.75m-7.5-10.5h6.375c.621 0 1.125.504 1.125 1.125v9.375m-8.25-3 1.5 1.5 3-3.75" /></svg>`;
           btn.style.color = "#16a34a";
           btn.style.borderColor = "#16a34a";
           btn.style.background = "#dcfce7";
-
           setTimeout(() => {
-            btn.innerHTML = `
-<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6 duration-500">
-  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" />
-</svg>
-              نسخ
-            `;
+            btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25ZM6.75 12h.008v.008H6.75V12Zm0 3h.008v.008H6.75V15Zm0 3h.008v.008H6.75V18Z" /></svg> نسخ`;
             btn.style.color = "#7c3aed";
             btn.style.borderColor = "#7c3aed";
             btn.style.background = "#f3e8ff";
@@ -283,8 +503,9 @@ BtnAzkar.onclick = () => {
     },
   });
 };
+
 // ---------------------------------
-// حديث نبوي عشوائي (Random Hadith API)
+// حديث نبوي عشوائي
 // ---------------------------------
 const BtnHadith = document.querySelector(".showRandomHadith");
 const spinnerIcon = document.querySelector(".LoadingIndicator");
@@ -292,10 +513,10 @@ let HadithUrl = "https://api.hadith.gading.dev/books/muslim?range=1-300";
 BtnHadith.onclick = () => {
   getRandomHadith();
 };
+
 async function getRandomHadith() {
   spinnerIcon.classList.remove("!hidden");
   spinnerIcon.classList.add("fa-spin");
-
   try {
     let response = await fetch(HadithUrl);
     response = await response.json();
@@ -303,34 +524,15 @@ async function getRandomHadith() {
     spinnerIcon.classList.add("!hidden");
     spinnerIcon.classList.remove("fa-spin");
     let randomHadith = hadiths[Math.floor(Math.random() * hadiths.length)];
-
     Swal.fire({
       title: "حديث نبوي ﷺ",
-
-      html: `
-<div class="
-font-['serif']
-text-sm sm:text-lg
-leading-7 sm:leading-8
-text-gray-700
-text-right
-max-h-[300px]
-overflow-y-auto
-px-2
-">
-    ${randomHadith.arab}
-    </div>
-    `,
-
+      html: `<div class="font-['serif'] text-sm sm:text-lg leading-7 sm:leading-8 text-gray-700 text-right max-h-[300px] overflow-y-auto px-2">${randomHadith.arab}</div>`,
       confirmButtonText: "حسناً",
-
       customClass: {
         title:
           "text-amber-600 font-extrabold text-xl sm:text-3xl text-center font-serif",
-
         confirmButton:
           "bg-amber-500 text-white px-5 py-2 sm:px-6 sm:py-3 rounded-lg hover:bg-amber-600 transition text-sm sm:text-base w-full",
-
         popup:
           "bg-white text-gray-800 rounded-lg shadow-lg p-4 sm:p-6 w-[280px] sm:w-[420px] md:w-[500px]",
       },
@@ -339,122 +541,9 @@ px-2
     console.error("Error fetching hadith:", error);
   }
 }
+
 // -------------------------
-// مواقيت الصلاة (Prayer Times API)
-// -------------------------
-
-const container = document.querySelector("#prayer-times");
-
-const prayerTimesUrl =
-  "https://api.aladhan.com/v1/timingsByCity?city=Gaza&country=Palestine&method=4";
-
-async function PrayerTime() {
-  try {
-    const res = await fetch(prayerTimesUrl);
-    const data = await res.json();
-    const t = data.data.timings;
-
-    const prayers = [
-      { name: "الفجر", time: t.Fajr, icon: "fa-moon" },
-      { name: "الظهر", time: t.Dhuhr, icon: "fa-sun" },
-      { name: "العصر", time: t.Asr, icon: "fa-cloud-sun" },
-      { name: "المغرب", time: t.Maghrib, icon: "fa-star-and-crescent" },
-      { name: "العشاء", time: t.Isha, icon: "fa-mosque" },
-    ];
-
-    container.innerHTML = "";
-
-    prayers.forEach((prayer) => {
-      let item = `
-        <div class="bg-gray-100 rounded-lg p-4 shadow text-center transition-all duration-300 cursor-default">
-          <i class="fas ${prayer.icon} text-purple-600 text-2xl mb-2"></i>
-          <h3 class="font-semibold">${prayer.name}</h3>
-          <p class="text-gray-700 mt-1">${prayer.time}</p>
-        </div>
-      `;
-      container.insertAdjacentHTML("beforeend", item);
-    });
-
-    // 👇 تحديد الصلاة الحالية فوراً
-    highlightCurrentPrayer(t);
-
-    // 👇 تحديث كل دقيقة
-    setInterval(() => highlightCurrentPrayer(t), 60 * 1000);
-  } catch (error) {
-    console.log("Error fetching prayer times:", error);
-  }
-}
-PrayerTime();
-// =========================================
-// تحديد الصلاة الحالية تلقائياً ✨
-// أضف هذا الكود في script.js بعد دالة PrayerTime()
-// =========================================
-
-function highlightCurrentPrayer(timings) {
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-  // تحويل وقت الصلاة "HH:MM" إلى دقائق
-  function toMinutes(timeStr) {
-    const [h, m] = timeStr.split(":").map(Number);
-    return h * 60 + m;
-  }
-
-  const prayerOrder = [
-    { key: "Fajr", name: "الفجر" },
-    { key: "Dhuhr", name: "الظهر" },
-    { key: "Asr", name: "العصر" },
-    { key: "Maghrib", name: "المغرب" },
-    { key: "Isha", name: "العشاء" },
-  ];
-
-  // إيجاد الصلاة الحالية: آخر صلاة مضى وقتها
-  let currentIndex = 0;
-  for (let i = 0; i < prayerOrder.length; i++) {
-    const prayerMin = toMinutes(timings[prayerOrder[i].key]);
-    if (currentMinutes >= prayerMin) {
-      currentIndex = i;
-    }
-  }
-
-  // تحديث بطاقات الصلوات
-  const cards = document.querySelectorAll("#prayer-times > div");
-  cards.forEach((card, index) => {
-    // إزالة التمييز القديم
-    card.classList.remove(
-      "ring-2",
-      "ring-purple-500",
-      "bg-purple-50",
-      "scale-105",
-      "shadow-lg",
-      "shadow-purple-200",
-    );
-    const badge = card.querySelector(".current-badge");
-    if (badge) badge.remove();
-
-    // إضافة التمييز للصلاة الحالية
-    if (index === currentIndex) {
-      card.classList.add(
-        "ring-2",
-        "ring-purple-500",
-        "bg-purple-50",
-        "scale-105",
-        "shadow-lg",
-        "shadow-purple-200",
-      );
-      card.style.transition = "all 0.4s ease";
-
-      // إضافة شارة "الصلاة الحالية"
-      const badge = document.createElement("div");
-      badge.className =
-        "current-badge mt-2 text-xs font-bold text-purple-600 bg-purple-100 rounded-full px-2 py-0.5 inline-block";
-      badge.textContent = "🕌 الصلاة الحالية";
-      card.appendChild(badge);
-    }
-  });
-}
-// -------------------------
-// حالة الطقس (Weather API)
+// حالة الطقس
 // -------------------------
 fetch(
   "https://api.open-meteo.com/v1/forecast?latitude=31.5&longitude=34.47&current_weather=true",
@@ -467,14 +556,12 @@ fetch(
   });
 
 // -------------------------
-// التاريخ الهجري (Hijri Date API)
+// التاريخ الهجري
 // -------------------------
 let today = new Date();
-let day = today.getDate();
-let month = today.getMonth() + 1;
-let year = today.getFullYear();
-
-fetch(`https://api.aladhan.com/v1/gToH?date=${day}-${month}-${year}`)
+fetch(
+  `https://api.aladhan.com/v1/gToH?date=${today.getDate()}-${today.getMonth() + 1}-${today.getFullYear()}`,
+)
   .then((res) => res.json())
   .then((data) => {
     let hijri = data.data.hijri;
@@ -483,7 +570,7 @@ fetch(`https://api.aladhan.com/v1/gToH?date=${day}-${month}-${year}`)
   });
 
 // -------------------------
-// مسبحة إلكترونية (Tasbeeh Counter)
+// عداد التسبيح
 // -------------------------
 const showCount = document.querySelector("#counter");
 const resetBtn = document.querySelector(".resetCounter");
@@ -497,8 +584,9 @@ resetBtn.onclick = () => {
   counter = 0;
   showCount.textContent = counter;
 };
+
 // -------------------------
-// عداد ختم القرآن (Progress Bar)
+// عداد ختم القرآن
 // -------------------------
 const totalPages = 604;
 const input = document.getElementById("pages-read");
@@ -506,43 +594,34 @@ const button = document.querySelector(".submitProgress");
 const bar = document.getElementById("progress-bar");
 const text = document.getElementById("progress-text");
 
-// استرجاع القيمة عند التحميل
 window.onload = () => {
   const saved = localStorage.getItem("pagesRead");
   if (saved) updateProgress(+saved);
 };
 
-// حفظ وتحديث عند الضغط
 button.onclick = () => {
   const pages = parseInt(input.value);
   if (!pages || pages < 0) return;
-
   localStorage.setItem("pagesRead", pages);
   updateProgress(pages);
   input.value = "";
 };
 
-// تحديث الشريط والنسبة
 function updateProgress(pages) {
   const percent = Math.min((pages / totalPages) * 100, 100);
   bar.style.width = percent + "%";
-
   bar.style.backgroundColor =
     percent < 33 ? "red" : percent < 66 ? "orange" : "green";
-
   text.textContent = `أنجزت ${percent.toFixed(2)}% من الختمة`;
 }
 
-//--------------------
-//Accordion
-//--------------------
+// -------------------------
+// Accordion
+// -------------------------
 document.querySelectorAll(".accordion-btn").forEach((button) => {
   button.onclick = () => {
-    // Toggle icon
     const icon = button.querySelector("span:last-child");
     icon.classList.toggle("rotate-45");
-
-    // Show/hide content
     const content = button.nextElementSibling;
     if (content.style.maxHeight) {
       content.style.maxHeight = null;
@@ -553,10 +632,9 @@ document.querySelectorAll(".accordion-btn").forEach((button) => {
 });
 
 // -------------------------
-// Back to Top Button
+// Back to Top
 // -------------------------
 const btn = document.getElementById("backToTop");
-// إظهار الزر بعد التمرير 300px
 window.addEventListener("scroll", () => {
   if (window.scrollY > 300) {
     btn.classList.remove("opacity-0", "invisible", "--bottom-40");
@@ -567,13 +645,11 @@ window.addEventListener("scroll", () => {
   }
 });
 btn.addEventListener("click", () => {
-  window.scrollTo({
-    top: 0,
-    behavior: "smooth",
-  });
+  window.scrollTo({ top: 0, behavior: "smooth" });
 });
+
 // -------------------------
-// Progress Bar للتمرير (Scroll Progress)
+// Scroll Progress Bar
 // -------------------------
 const progressBarr = document.querySelector("#progress-barr");
 window.onscroll = () => {
@@ -583,29 +659,21 @@ window.onscroll = () => {
     "px";
 };
 
-// =============================
-// آية قرآنية Toast كل 15 دقيقة
-// =============================
-// ==========================
-// آية قرآنية Toast أنيقة
-// ==========================
+// -------------------------
+// آية قرآنية Toast
+// -------------------------
 const RANDOM_AYAH_URL =
   "https://api.quran.com/api/v4/verses/random?language=ar&fields=text_uthmani,chapter_id,verse_key";
-const CHAPTER_URL = (chapterId) =>
-  `https://api.quran.com/api/v4/chapters/${chapterId}?language=ar`;
+const CHAPTER_URL = (id) =>
+  `https://api.quran.com/api/v4/chapters/${id}?language=ar`;
 
 async function showElegantAyahToast() {
   try {
-    // جلب الآية
     const resAyah = await fetch(RANDOM_AYAH_URL);
     const { text_uthmani: ayahText, verse_key } = (await resAyah.json()).verse;
     const [surahNumber, ayahNumber] = verse_key.split(":");
-
-    // جلب اسم السورة
     const resSurah = await fetch(CHAPTER_URL(surahNumber));
     const surahName = (await resSurah.json()).chapter.name_arabic;
-
-    // إنشاء Toast أنيق
     Swal.fire({
       toast: true,
       position: "top-end",
@@ -627,10 +695,8 @@ async function showElegantAyahToast() {
             <div class="font-['Amiri'] text-xs sm:text-sm leading-6 sm:leading-7 font-bold">${ayahText}</div>
             <div class="font-['Amiri'] text-[10px] sm:text-xs text-gray-500 mt-1">سورة ${surahName} - آية ${ayahNumber}</div>
           </div>
-        </div>
-      `,
+        </div>`,
       didOpen: (toastEl) => {
-        // إغلاق عند الضغط
         toastEl.onclick = () => Swal.close();
       },
     });
@@ -638,38 +704,23 @@ async function showElegantAyahToast() {
     console.error("Ayah API Error:", error);
   }
 }
-
-// أول مرة عند التحميل
 showElegantAyahToast();
-
-// كل 5 دقائق
 setInterval(showElegantAyahToast, 5 * 60 * 1000);
 
-//-----------------------
-// copyAccourdion
-//-----------------------
+// -------------------------
+// Copy Accordion
+// -------------------------
 const accEl = document.querySelectorAll(".copy-accordion svg");
-
 accEl.forEach((el) => {
   el.onclick = () => {
-    // const txt = el.previousElementSibling.textContent;
     let txt = el.parentElement.childNodes[0].textContent.trim();
     navigator.clipboard.writeText(txt);
-
-    // el.outerHTML; // مش هنا
-    // بدل innerHTML استخدم الـ parent
     const parent = el.parentElement;
-
     parent.querySelector("svg").innerHTML =
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-green-500 cursor-pointer duration-700">
-      <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" />
-    </svg>`;
-
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-green-500 cursor-pointer duration-700"><path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clip-rule="evenodd" /></svg>`;
     setTimeout(() => {
       parent.querySelector("svg").innerHTML =
-        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-500 hover:text-purple-600 transition-colors duration-300 cursor-pointer duration-700">
-        <path fill-rule="evenodd" d="M13.887 3.182c.396.037.79.08 1.183.128C16.194 3.45 17 4.414 17 5.517V16.75A2.25 2.25 0 0 1 14.75 19h-9.5A2.25 2.25 0 0 1 3 16.75V5.517c0-1.103.806-2.068 1.93-2.207.393-.048.787-.09 1.183-.128A3.001 3.001 0 0 1 9 1h2c1.373 0 2.531.923 2.887 2.182ZM7.5 4A1.5 1.5 0 0 1 9 2.5h2A1.5 1.5 0 0 1 12.5 4v.5h-5V4Z" clip-rule="evenodd" />
-      </svg>`;
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5 text-gray-500 hover:text-purple-600 transition-colors duration-300 cursor-pointer"><path fill-rule="evenodd" d="M13.887 3.182c.396.037.79.08 1.183.128C16.194 3.45 17 4.414 17 5.517V16.75A2.25 2.25 0 0 1 14.75 19h-9.5A2.25 2.25 0 0 1 3 16.75V5.517c0-1.103.806-2.068 1.93-2.207.393-.048.787-.09 1.183-.128A3.001 3.001 0 0 1 9 1h2c1.373 0 2.531.923 2.887 2.182ZM7.5 4A1.5 1.5 0 0 1 9 2.5h2A1.5 1.5 0 0 1 12.5 4v.5h-5V4Z" clip-rule="evenodd" /></svg>`;
     }, 2000);
   };
 });

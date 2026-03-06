@@ -86,15 +86,51 @@
         حـــديـــث نـبــــوي
       </button>
     </div>
+
     <!-- مواقيت الصلاة -->
     <section
       class="bg-white shadow-lg rounded-lg p-6 w-full sm:w-11/12 mx-auto mb-6"
     >
       <h2
-        class="text-xl sm:text-2xl font-bold mb-6 text-center text-purple-900"
+        class="text-xl sm:text-2xl font-bold mb-4 text-center text-purple-900"
       >
-        🕌 مواقيت الصلاة لفلسطين
+        🕌 مواقيت الصلاة
       </h2>
+
+      <!-- ===== شريط اختيار الموقع ===== -->
+      <div class="flex flex-wrap items-center justify-center gap-3 mb-5">
+        <!-- زر GPS -->
+        <button
+          id="gps-btn"
+          class="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-xl hover:bg-purple-700 transition text-sm font-bold shadow"
+        >
+          <i class="fas fa-location-crosshairs"></i>
+          <span id="gps-label">📍 موقعي تلقائياً</span>
+        </button>
+
+        <!-- Dropdown المدن -->
+        <div class="relative">
+          <select
+            id="city-select"
+            class="appearance-none bg-gray-100 text-gray-800 border border-gray-200 rounded-xl px-4 py-2 pl-8 text-sm font-bold cursor-pointer focus:outline-none focus:ring-2 focus:ring-purple-400 shadow"
+            style="min-width: 200px"
+          >
+            <option value="" disabled>🌍 اختر مدينتك</option>
+          </select>
+          <i
+            class="fas fa-chevron-down absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs pointer-events-none"
+          ></i>
+        </div>
+
+        <!-- شارة الموقع الحالي -->
+        <span
+          id="loc-badge"
+          class="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-full font-bold"
+        >
+          📌 غزة، فلسطين
+        </span>
+      </div>
+      <!-- ===== نهاية شريط الموقع ===== -->
 
       <div
         id="prayer-times"
@@ -198,7 +234,6 @@
     <div
       class="space-y-2 w-full sm:w-11/12 justify-center items-center mx-auto mb-6 copy-accordion"
     >
-      <!-- Item 1 -->
       <div class="bg-white border border-gray-200 rounded-lg">
         <button
           class="accordion-btn w-full p-4 text-left flex justify-between items-center rounded-lg hover:bg-gray-100"
@@ -243,8 +278,8 @@
           <div
             class="p-4 pt-0 pb-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
           >
-            ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الأَجْرُ إِنْ
-            شَاءَ اللَّهُ
+            ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الأَجْرُ إِنْ
+            شَاءَ اللَّهُ
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -275,7 +310,7 @@
           <div
             class="p-4 pt-0 pb-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
           >
-            يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغيثُ
+            يَا حَيُّ يَا قَيُّومُ بِرَحْمَتِكَ أَسْتَغيثُ
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -306,7 +341,7 @@
           <div
             class="p-4 pb-0 pt-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
           >
-            اَسْتَغْفِرُ اللہَ رَبِّی مِنْ کُلِّ ذَنْبٍ وَّ اَتُوْبُ اِلَیْہِ
+            اَسْتَغْفِرُ اللہَ رَبِّی مِنْ کُلِّ ذَنْبٍ وَّ اَتُوْبُ اِلَیْہِ
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -337,7 +372,7 @@
           <div
             class="p-4 pb-0 pt-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
           >
-            اَللَّهُمَّ أَجِرْنِي مِنَ النَّارِ
+            اَللَّهُمَّ أَجِرْنِي مِنَ النَّارِ
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -366,7 +401,7 @@
           <div
             class="p-4 pb-0 pt-0 text-gray-600 my-5 font-bold text-lg flex items-center justify-between"
           >
-            اللَّهُمَّ إِنَّكَ عَفُوٌّ كَرِيمٌ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي
+            اللَّهُمَّ إِنَّكَ عَفُوٌّ كَرِيمٌ تُحِبُّ الْعَفْوَ فَاعْفُ عَنِّي
             <svg
               xmlns="http://www.w3.org/2000/svg"
               viewBox="0 0 20 20"
@@ -383,6 +418,7 @@
         </div>
       </div>
     </div>
+
     <!-- زر العودة للأعلى -->
     <button
       id="backToTop"
@@ -390,6 +426,7 @@
     >
       <i class="fa-solid fa-angles-up text-lg sm:text-xl"></i>
     </button>
+
     <!-- الفوتر -->
     <footer class="bg-transparent text-white py-6 w-full">
       <div class="flex justify-center items-center">
