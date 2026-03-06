@@ -1,40 +1,149 @@
+// =========================================
+// 🌙 عداد الإفطار الديناميكي — استبدل الكود القديم بهذا كاملاً
+// =========================================
+
 const el = document.querySelector("#iftar-countdown");
-const IFTAR = { hour: 17, minute: 40 };
 let alerted = false;
-setInterval(() => {
-  const now = new Date();
-  const iftar = new Date();
+let halfAlerted = false;
+let iftarHour = null;
+let iftarMinute = null;
 
-  iftar.setHours(IFTAR.hour, IFTAR.minute, 0, 0);
-  if (now >= iftar) iftar.setDate(iftar.getDate() + 1);
-
-  const diff = iftar - now;
-
-  const h = String(Math.floor(diff / 3600000)).padStart(2, "0");
-  const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2, "0");
-  const s = String(Math.floor((diff % 60000) / 1000)).padStart(2, "0");
-
-  el.innerHTML = `
-    <div class="text-center">
-      <div class="text-xl font-bold">
-        ${h} ساعة : ${m} دقيقة : ${s} ثانية
-      </div>
-      <div class="text-purple-600 font-bold mt-2">
-        حتى الإفطار القادم 🌙
-      </div>
-    </div>
-  `;
-
-  if (diff <= 0 && !alerted) {
-    alerted = true;
-
-    Swal.fire({
-      title: "🌙 إفطار مبارك",
-      text: "تقبل الله صيامكم",
-      icon: "success",
-    });
+// جلب وقت المغرب من API مواقيت الصلاة
+async function fetchIftarTime() {
+  try {
+    const res = await fetch(
+      "https://api.aladhan.com/v1/timingsByCity?city=Gaza&country=Palestine&method=4",
+    );
+    const data = await res.json();
+    const maghrib = data.data.timings.Maghrib; // "HH:MM"
+    [iftarHour, iftarMinute] = maghrib.split(":").map(Number);
+  } catch (err) {
+    console.error("تعذّر جلب وقت الإفطار:", err);
+    // fallback
+    iftarHour = 17;
+    iftarMinute = 40;
   }
-}, 1000);
+}
+
+// بناء كائن وقت الإفطار ليومنا
+function getIftarDate() {
+  const iftar = new Date();
+  iftar.setHours(iftarHour, iftarMinute, 0, 0);
+  return iftar;
+}
+
+// =========================================
+// العداد الرئيسي
+// =========================================
+function startCountdown() {
+  setInterval(() => {
+    if (iftarHour === null) return; // لسا ما جاء الوقت من API
+
+    const now = new Date();
+    let iftar = getIftarDate();
+
+    const diff = iftar - now;
+    const diffAbs = Math.abs(diff);
+
+    // ——— بعد الإفطار بأقل من 30 دقيقة ———
+    if (diff <= 0 && diffAbs <= 30 * 60 * 1000) {
+      const minsAgo = Math.floor(diffAbs / 60000);
+      const secsAgo = Math.floor((diffAbs % 60000) / 1000);
+
+      el.innerHTML = `
+        <div class="text-center">
+          <div class="text-2xl font-bold text-green-600">🍽️ أفطرتَ منذ</div>
+          <div class="text-xl font-bold mt-1 text-green-700">
+            ${String(minsAgo).padStart(2, "0")} دقيقة : ${String(secsAgo).padStart(2, "0")} ثانية
+          </div>
+          <div class="text-purple-600 font-bold mt-2 text-sm">
+            ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الأَجْرُ إِنْ شَاءَ اللَّهُ 🤲
+          </div>
+        </div>`;
+
+      // تنبيه لحظة الإفطار (مرة واحدة)
+      if (!alerted) {
+        alerted = true;
+        Swal.fire({
+          title: "🌙 إفطار مبارك",
+          html: `
+            <div class="text-lg font-bold text-gray-700 mb-3" style="font-family: 'Amiri'">تقبّل الله صيامكم وقيامكم</div>
+            <div class="bg-purple-50 rounded-xl p-4 text-center text-gray-800 font-bold leading-8">
+              ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ<br/>وَثَبَتَ الأَجْرُ إِنْ شَاءَ اللَّهُ
+            </div>`,
+          confirmButtonText: "اللهم آمين",
+          confirmButtonColor: "#7c3aed",
+          background: "#fdf4ff",
+        });
+      }
+
+      return;
+    }
+
+    // ——— بعد 30 دقيقة من الإفطار: أعد للإفطار القادم ———
+    if (diff <= 0 && diffAbs > 30 * 60 * 1000) {
+      iftar.setDate(iftar.getDate() + 1);
+      alerted = false;
+      halfAlerted = false;
+    }
+
+    // ——— العداد الطبيعي للإفطار القادم ———
+    const timeLeft = iftar - now;
+    const h = String(Math.floor(timeLeft / 3600000)).padStart(2, "0");
+    const m = String(Math.floor((timeLeft % 3600000) / 60000)).padStart(2, "0");
+    const s = String(Math.floor((timeLeft % 60000) / 1000)).padStart(2, "0");
+
+    el.innerHTML = `
+      <div class="text-center">
+        <div class="text-xl font-bold text-purble-800">
+          ${h} ساعة : ${m} دقيقة : ${s} ثانية
+        </div>
+        <div class="text-purple-600 font-bold mt-2">
+          حتى الإفطار القادم 🌙
+        </div>
+      </div>`;
+
+    // ——— تنبيه قبل الإفطار بـ 30 دقيقة ———
+    if (timeLeft <= 30 * 60 * 1000 && timeLeft > 0 && !halfAlerted) {
+      halfAlerted = true;
+      const minsLeft = Math.ceil(timeLeft / 60000);
+      Swal.fire({
+        toast: true,
+        position: "top",
+        showConfirmButton: false,
+        timer: 8000,
+        timerProgressBar: true,
+        background: "#fdf4ff",
+        html: `
+          <div class="flex items-center gap-3 text-right py-1">
+            <span class="text-3xl">🌅</span>
+            <div>
+              <div class="font-bold text-purple-700 text-base">تبقّى ${minsLeft} دقيقة على الإفطار!</div>
+              <div class="text-gray-600 text-sm mt-0.5">استعدّ وادعُ فإن دعوة الصائم لا تُرد</div>
+            </div>
+          </div>`,
+        showClass: { popup: "animate__animated animate__fadeInDown" },
+        hideClass: { popup: "animate__animated animate__fadeOutUp" },
+      });
+    }
+  }, 1000);
+}
+
+// =========================================
+// تشغيل كل شيء
+// =========================================
+fetchIftarTime().then(() => {
+  startCountdown();
+
+  // تحديث وقت الإفطار كل يوم عند منتصف الليل
+  const now = new Date();
+  const midnight = new Date();
+  midnight.setHours(24, 0, 0, 0);
+  setTimeout(() => {
+    fetchIftarTime();
+    setInterval(fetchIftarTime, 24 * 60 * 60 * 1000);
+  }, midnight - now);
+});
 // -------------------------
 // أذكار عشوائية (Azkar)
 // -------------------------
@@ -253,28 +362,97 @@ async function PrayerTime() {
       { name: "العشاء", time: t.Isha, icon: "fa-mosque" },
     ];
 
-    // مسح المحتوى القديم
     container.innerHTML = "";
 
     prayers.forEach((prayer) => {
       let item = `
-      <div class="bg-gray-100 rounded-lg p-4 shadow text-center">
-
-        <i class="fas ${prayer.icon} text-purple-600 text-2xl mb-2"></i>
-
-        <h3 class="font-semibold">${prayer.name}</h3>
-
-        <p class="text-gray-700 mt-1">${prayer.time}</p>
-
-      </div>
+        <div class="bg-gray-100 rounded-lg p-4 shadow text-center transition-all duration-300 cursor-default">
+          <i class="fas ${prayer.icon} text-purple-600 text-2xl mb-2"></i>
+          <h3 class="font-semibold">${prayer.name}</h3>
+          <p class="text-gray-700 mt-1">${prayer.time}</p>
+        </div>
       `;
       container.insertAdjacentHTML("beforeend", item);
     });
+
+    // 👇 تحديد الصلاة الحالية فوراً
+    highlightCurrentPrayer(t);
+
+    // 👇 تحديث كل دقيقة
+    setInterval(() => highlightCurrentPrayer(t), 60 * 1000);
   } catch (error) {
     console.log("Error fetching prayer times:", error);
   }
 }
 PrayerTime();
+// =========================================
+// تحديد الصلاة الحالية تلقائياً ✨
+// أضف هذا الكود في script.js بعد دالة PrayerTime()
+// =========================================
+
+function highlightCurrentPrayer(timings) {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+  // تحويل وقت الصلاة "HH:MM" إلى دقائق
+  function toMinutes(timeStr) {
+    const [h, m] = timeStr.split(":").map(Number);
+    return h * 60 + m;
+  }
+
+  const prayerOrder = [
+    { key: "Fajr", name: "الفجر" },
+    { key: "Dhuhr", name: "الظهر" },
+    { key: "Asr", name: "العصر" },
+    { key: "Maghrib", name: "المغرب" },
+    { key: "Isha", name: "العشاء" },
+  ];
+
+  // إيجاد الصلاة الحالية: آخر صلاة مضى وقتها
+  let currentIndex = 0;
+  for (let i = 0; i < prayerOrder.length; i++) {
+    const prayerMin = toMinutes(timings[prayerOrder[i].key]);
+    if (currentMinutes >= prayerMin) {
+      currentIndex = i;
+    }
+  }
+
+  // تحديث بطاقات الصلوات
+  const cards = document.querySelectorAll("#prayer-times > div");
+  cards.forEach((card, index) => {
+    // إزالة التمييز القديم
+    card.classList.remove(
+      "ring-2",
+      "ring-purple-500",
+      "bg-purple-50",
+      "scale-105",
+      "shadow-lg",
+      "shadow-purple-200",
+    );
+    const badge = card.querySelector(".current-badge");
+    if (badge) badge.remove();
+
+    // إضافة التمييز للصلاة الحالية
+    if (index === currentIndex) {
+      card.classList.add(
+        "ring-2",
+        "ring-purple-500",
+        "bg-purple-50",
+        "scale-105",
+        "shadow-lg",
+        "shadow-purple-200",
+      );
+      card.style.transition = "all 0.4s ease";
+
+      // إضافة شارة "الصلاة الحالية"
+      const badge = document.createElement("div");
+      badge.className =
+        "current-badge mt-2 text-xs font-bold text-purple-600 bg-purple-100 rounded-full px-2 py-0.5 inline-block";
+      badge.textContent = "🕌 الصلاة الحالية";
+      card.appendChild(badge);
+    }
+  });
+}
 // -------------------------
 // حالة الطقس (Weather API)
 // -------------------------
